@@ -1,0 +1,1 @@
+{"run_id": "7fc628d2-f87b-45c4-9f23-70785a3f3a44", "table_name": "customer", "cdc_file": "cdc_20260422_093000.csv", "rows_read": 10, "rows_inserted": 10, "rows_updated": 0, "rows_deleted": 0, "rows_rejected": 0, "started_at": "2026-04-22 19:28:22", "finished_at": "2026-04-22 19:28:28", "status": "FAILED"}
