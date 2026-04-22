@@ -1,6 +1,0 @@
-{
-    "table": "customer",
-    "last_processed_file": "cdc_20260422_093000.csv",
-    "last_processed_at": "2026-04-22 19:28:28",
-    "status": "FAILED"
-}

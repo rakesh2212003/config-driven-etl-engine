@@ -1,54 +1,36 @@
-import os
 import logging
-from datetime import datetime
+import sys
+import os
 
-LOG_DIR         = "logs"
-LOG_FILE_PREFIX = "log"
-LOG_FORMAT      = "%(asctime)s | %(name)-32s | %(levelname)-8s | %(message)s"
-LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-FILE_LEVEL      = "DEBUG"
-CONSOLE_LEVEL   = "INFO"
-
-try:
-    os.makedirs(LOG_DIR, exist_ok=True)
-except Exception as e:
-    print(f"[WARN] Could not create log directory '{LOG_DIR}': {e}")
+_LOGGER_INITIALIZED = False
 
 
-def get_logger(name: str) -> logging.Logger:
-    """
-    Get or create a logger with file and console handlers.
+def setup_logger(log_file="logs/app.log"):
+    global _LOGGER_INITIALIZED
 
-    Parameters
-    ----------
-    name : logger name (typically __name__)
+    if _LOGGER_INITIALIZED:
+        return
 
-    Returns
-    -------
-    logging.Logger
-    """
-    logger = logging.getLogger(name)
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
-    if logger.handlers:
-        return logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
 
-    logger.setLevel(logging.DEBUG)
-    fmt = logging.Formatter(LOG_FORMAT, datefmt=LOG_DATE_FORMAT)
+    formatter = logging.Formatter(
+        "%(asctime)s | %(levelname)-5s | %(name)-15s | %(message)s"
+    )
 
-    try:
-        # File handler — DEBUG and above
-        log_file = os.path.join(LOG_DIR, f"{LOG_FILE_PREFIX}_{datetime.now():%Y%m%d}.log")
-        fh = logging.FileHandler(log_file)
-        fh.setLevel(getattr(logging, FILE_LEVEL))
-        fh.setFormatter(fmt)
-        logger.addHandler(fh)
-    except Exception as e:
-        print(f"[WARN] Could not attach file handler for logger '{name}': {e}")
+    ch = logging.StreamHandler(sys.stdout)
+    fh = logging.FileHandler(log_file)
 
-    # Console handler — INFO and above
-    ch = logging.StreamHandler()
-    ch.setLevel(getattr(logging, CONSOLE_LEVEL))
-    ch.setFormatter(fmt)
-    logger.addHandler(ch)
+    ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
 
-    return logger
+    root_logger.addHandler(ch)
+    root_logger.addHandler(fh)
+
+    _LOGGER_INITIALIZED = True
+
+
+def get_logger(name: str):
+    return logging.getLogger(name)
