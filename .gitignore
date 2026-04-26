@@ -1,15 +1,15 @@
 # =========================
 # 🔹 Python
 # =========================
-
 **pycache**/
 *.py[cod]
 *.pyo
 *.pyd
 *.so
 
-# Virtual environments
-
+# =========================
+# 🔹 Virtual environments
+# =========================
 .venv/
 venv/
 env/
@@ -24,13 +24,13 @@ logs/*
 # =========================
 # 🔹 Data (keep structure, ignore content)
 # =========================
-
 data/raw/*
 data/processed/*
 data/tmp/*
 
-# keep empty folders tracked
-
+# =========================
+# 🔹 keep empty folders tracked
+# =========================
 !data/raw/.keep
 !data/processed/.keep
 !data/tmp/.keep
@@ -38,7 +38,6 @@ data/tmp/*
 # =========================
 # 🔹 Spark / Hadoop
 # =========================
-
 metastore_db/
 spark-warehouse/
 derby.log
@@ -46,7 +45,6 @@ derby.log
 # =========================
 # 🔹 IDE / Editor
 # =========================
-
 .vscode/
 .idea/
 *.iml
@@ -54,14 +52,12 @@ derby.log
 # =========================
 # 🔹 OS files
 # =========================
-
 .DS_Store
 Thumbs.db
 
 # =========================
 # 🔹 Build / Packaging
 # =========================
-
 dist/
 build/
 *.egg-info/
@@ -69,11 +65,9 @@ build/
 # =========================
 # 🔹 Environment variables
 # =========================
-
 .env
 
 # =========================
 # 🔹 Jupyter (if you use later)
 # =========================
-
 .ipynb_checkpoints/

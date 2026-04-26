@@ -1,6 +1,0 @@
-app_name: config-driven-etl
-
-env: local
-
-spark:
-  spark.sql.shuffle.partitions: 2

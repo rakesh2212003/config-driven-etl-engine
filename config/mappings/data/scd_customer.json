@@ -1,0 +1,49 @@
+{
+    "table_name": "scd_customer",
+    "primary_key": ["customer_id"],
+    "write_mode": "upsert",
+    "hudi": {
+        "table_type": "COPY_ON_WRITE",
+        "options": {
+            "hoodie.datasource.write.recordkey.field": "customer_id,effective_from",
+            "hoodie.datasource.write.precombine.field": "effective_from"
+        }
+    },
+    "columns": [
+        {
+            "seq": 1,
+            "source_field": "operation",
+            "target_field": "op",
+            "data_type": "string",
+            "transform": ["trim", "upper"]
+        },
+        {
+            "seq": 2,
+            "source_field": "customer_identifier",
+            "target_field": "customer_id",
+            "data_type": "int",
+            "transform": []
+        },
+        {
+            "seq": 3,
+            "source_field": "customer_name",
+            "target_field": "name",
+            "data_type": "string",
+            "transform": ["trim", "capitalize"]
+        },
+        {
+            "seq": 4,
+            "source_field": "customer_email",
+            "target_field": "email",
+            "data_type": "string",
+            "transform": ["trim", "lower"]
+        },
+        {
+            "seq": 5,
+            "source_field": "updated_timestamp",
+            "target_field": "effective_from",
+            "data_type": "timestamp",
+            "transform": []
+        }
+    ]
+}

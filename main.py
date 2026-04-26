@@ -2,44 +2,35 @@ import argparse
 
 from src.core.session import get_spark
 from src.core.logger import setup_logger, get_logger
-from src.pipelines.customer_pipeline import CustomerPipeline
+from src.pipelines.generic_pipeline import GenericPipeline
 
 
-# 🔹 Initialize logging once
+# 🔹 Setup logging once
 setup_logger()
-logger = get_logger("Main")
-
-
-# 🔹 Pipeline registry
-PIPELINE_REGISTRY = {
-    "customer": CustomerPipeline,
-}
+logger = get_logger(__name__)
 
 
 def main():
     try:
         parser = argparse.ArgumentParser()
-        parser.add_argument("--table", required=True, help="Pipeline to run")
+        parser.add_argument("--table", required=True, help="Table name to process")
 
         args = parser.parse_args()
-        job_name = args.table
+        table_name = args.table
 
-        logger.info(f"Starting job: {job_name}")
+        logger.info(f"Starting job for table: {table_name}")
 
-        if job_name not in PIPELINE_REGISTRY:
-            raise ValueError(f"Unknown job: {job_name}")
-
+        # 🔹 Create Spark session
         spark = get_spark()
 
-        pipeline_class = PIPELINE_REGISTRY[job_name]
-        pipeline = pipeline_class(spark)
-
+        # 🔹 Run generic pipeline
+        pipeline = GenericPipeline(spark, table_name)
         success = pipeline.run()
 
         if not success:
             raise RuntimeError("Pipeline execution failed")
 
-        logger.info("Job completed successfully")
+        logger.info(f"Job completed successfully for table: {table_name}")
 
     except Exception as e:
         logger.error(f"Job failed: {str(e)}", exc_info=True)
