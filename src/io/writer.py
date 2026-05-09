@@ -5,14 +5,14 @@ logger = get_logger("Writer")
 
 def write_data(df, path: str, fmt: str = "parquet", mode: str = "overwrite"):
     try:
-        logger.info(f"Writing data to: {path} | format: {fmt} | mode: {mode}")
+        logger.info(f"Writing data → {path}  format={fmt}  mode={mode}")
 
-        (
-            df.write
-            .format(fmt)
-            .mode(mode)
-            .save(path)
-        )
+        writer = df.write.format(fmt).mode(mode)
+
+        if fmt == "parquet":
+            writer = writer.option("compression", "snappy")
+
+        writer.save(path)
 
         logger.info("Write successful")
         return True
