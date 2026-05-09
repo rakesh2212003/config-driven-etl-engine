@@ -1,0 +1,8 @@
+{
+    "table_name": "customer",
+    "bookmark_column": "updated_timestamp",
+    "last_processed_value": "1900-01-01 00:00:00",
+    "last_run_status": "INITIALIZED",
+    "last_run_started_at": null,
+    "last_run_finished_at": null
+}
