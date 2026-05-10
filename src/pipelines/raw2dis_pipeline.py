@@ -185,10 +185,10 @@ class GenericPipeline:
                 f"for table: {table_name}"
             )
 
-        except Exception as error:
-            logger.exception(
-                f"Pipeline failed for table: "
-                f"{table_name}"
-            )
-            raise error
+        except Exception:
+            # logger.exception(
+            #     f"Pipeline failed for table: "
+            #     f"{table_name}"
+            # )
+            raise
         
