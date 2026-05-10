@@ -1,14 +1,14 @@
 from pyspark.sql.functions import col, max as spark_max
 
 from src.core.config_loader import (
-    load_yaml_config,
-    load_json_config
+    load_yaml,
+    load_json
 )
 from src.core.logger import get_logger
 from src.core.session import get_spark_session
 
-from src.io.reader import read_data
-from src.io.writter import write_data
+from src.io.reader import read_dataframe
+from src.io.writter import write_dataframe
 
 from src.services.mapping_service import (
     apply_mapping
@@ -31,7 +31,7 @@ class GenericPipeline:
 
         self.spark = get_spark_session()
 
-        self.app_config = load_yaml_config(
+        self.app_config = load_yaml(
             "config/app.yaml"
         )
 
@@ -76,7 +76,7 @@ class GenericPipeline:
             )
 
             # configs
-            mapping_config = load_json_config(
+            mapping_config = load_json(
                 mapping_path
             )
 
@@ -85,7 +85,7 @@ class GenericPipeline:
             )
 
             # read
-            dataframe = read_data(
+            dataframe = read_dataframe(
                 spark=self.spark,
                 input_path=input_path,
                 file_format=input_format,
@@ -144,7 +144,7 @@ class GenericPipeline:
             )
 
             # write
-            write_data(
+            write_dataframe(
                 dataframe=dataframe,
                 output_path=output_path,
                 file_format=output_format,

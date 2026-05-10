@@ -9,7 +9,7 @@ def get_spark_session() -> SparkSession:
     try:
         spark_config = CONFIG["spark"]
 
-        app_name = spark_config("app_name", "ETL")
+        app_name = spark_config["app_name"]
         master = spark_config.get("master", "local[*]")
         extra_configs = spark_config.get("config", {})
 
