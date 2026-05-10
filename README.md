@@ -1,325 +1,385 @@
-# RAW2DIS
+# Config-Driven PySpark CDC + SCD2 Engine
 
-A generic, config-driven PySpark CDC pipeline that reads raw files, applies data mapping transformations, and writes to a Hudi table with SCD Type 2 history tracking.
+A generic, modular, config-driven PySpark data engineering framework designed for:
 
----
+- CDC (Change Data Capture) ingestion
+- Incremental processing
+- SCD Type 2 versioning
+- Hudi-based storage
+- Generic table onboarding
+- Job-based execution architecture
 
-## Overview
-
-```
-RAW Layer (CSV / Parquet / JSON)
-        │
-        ▼
-   Bookmark Check
-   (skip already processed files)
-        │
-        ▼
-   Format Detection
-   (auto-detect from file extension)
-        │
-        ▼
-   Data Mapping
-   (rules: CAST, TRIM, UPPER, COALESCE, DERIVED ...)
-        │
-        ▼
-   SCD Type 2
-   (close old records, insert new versions)
-        │
-        ▼
-  DIS Layer (Hudi / MERGE_ON_READ)
-```
+The framework is designed to behave like a lightweight data platform instead of a collection of table-specific ETL scripts.
 
 ---
 
-## Project Structure
+FEATURES
 
-```
-raw2dis/
-│
-├── main.py                          # Entry point
-├── requirements.txt
+1. Generic Pipeline Architecture
+
+No table-specific Python pipelines are required.
+
+New tables can be onboarded by simply adding:
+
+- raw source file
+- mapping config
+- bookmark config
+
+---
+
+2. Config-Driven Processing
+
+Pipeline behavior is controlled through JSON/YAML configuration files.
+
+Supports:
+
+- column mapping
+- datatype casting
+- transformations
+- Hudi options
+- incremental processing
+
+---
+
+3. CDC Processing
+
+Supports incremental CDC-style ingestion using bookmarks.
+
+Example operations:
+
+- Insert (I)
+- Update (U)
+- Delete (D)
+
+---
+
+4. SCD Type 2 Ready
+
+Framework supports historical version tracking using:
+
+- effective_from
+- effective_to
+- current_row
+
+---
+
+5. Bookmark Processing
+
+Tracks previously processed records for incremental execution.
+
+---
+
+6. Hudi Integration
+
+Supports Apache Hudi for:
+
+- upserts
+- versioned storage
+- scalable lakehouse ingestion
+
+---
+
+7. Modular Design
+
+Clean separation of concerns:
+
+core        -> framework utilities
+io          -> data reading/writing
+pipelines   -> orchestration
+services    -> business logic
+transforms  -> reusable transformations
+utils       -> helper utilities
+
+---
+
+PROJECT STRUCTURE
+
+project/
 │
 ├── config/
-│   ├── app.yaml                     # App-level config (Spark, paths, audit, logging)
-│   ├── schemas/                     # DDL schema files per table
+│   ├── app.yaml
 │   └── mappings/
-│       ├── data-mapping-config/
-│       │   └── customers.json       # Column mapping + Hudi config per table
-│       └── bookmark-mapping-config/
-│           └── customers.json       # (legacy — replaced by data/bookmarks/bookmark.json)
+│       ├── data/
+│       │   └── customer.json
+│       └── bookmark/
+│           └── customer.json
 │
 ├── data/
 │   ├── raw/
-│   │   └── customers/
-│   │       ├── cdc_20240101_120000.csv
-│   │       └── cdc_20240102_120000.csv
-│   ├── distilled/
-│   │   └── customers/               # Hudi table output
-│   ├── bookmarks/
-│   │   └── bookmark.json            # Single bookmark file for all tables
-│   ├── rejected/
-│   │   └── customers/               # Bad records
-│   └── audit/
-│       └── customers/
-│           └── audit_YYYYMMDD.jsonl # Daily audit log (newline-delimited JSON)
+│   │   └── customer.csv
+│   ├── processed/
+│   └── tmp/
+│
+├── jobs/
+│   ├── raw2dis.py
+│   ├── dis2con.py
+│   ├── postgres_load.py
+│   └── index_load.py
 │
 ├── logs/
-│   └── log_YYYYMMDD.log
 │
-└── src/
-    ├── common/
-    │   └── helpers.py               # format_duration, write_audit, ensure_dir
-    ├── core/
-    │   ├── config.py                # load_config, load_mapping, load/save bookmark
-    │   ├── logger.py                # get_logger (file + console handlers)
-    │   └── spark.py                 # get_spark (builds SparkSession from app.yaml)
-    ├── io/
-    │   ├── reader.py                # read_raw, get_pending_cdc_files
-    │   └── writer.py                # write_hudi (SCD2 close + insert)
-    ├── transforms/
-    │   └── mapping.py               # apply_mapping, rule engine
-    └── jobs/
-        ├── __init__.py              # JOB_REGISTRY + get_job()
-        └── raw2dis.py               # Main job orchestration
-```
+├── src/
+│   ├── core/
+│   │   ├── config_loader.py
+│   │   ├── logger.py
+│   │   └── session.py
+│   │
+│   ├── io/
+│   │   ├── reader.py
+│   │   └── writer.py
+│   │
+│   ├── pipelines/
+│   │   └── generic_pipeline.py
+│   │
+│   ├── services/
+│   │   ├── bookmark_service.py
+│   │   ├── mapping_service.py
+│   │   └── scd_service.py
+│   │
+│   ├── transforms/
+│   │   └── transformations.py
+│   │
+│   └── utils/
+│
+├── requirements.txt
+├── .gitignore
+└── README.md
 
 ---
 
-## Installation
+INSTALLATION
 
-```bash
-# Create virtual environment
+1. Create Virtual Environment
+
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
 
-# Install dependencies
+---
+
+2. Activate Environment
+
+Windows:
+venv\Scripts\activate
+
+Linux / Mac:
+source venv/bin/activate
+
+---
+
+3. Install Dependencies
+
 pip install -r requirements.txt
-```
-
-### requirements.txt
-
-```
-pyspark==3.4.0
-hudi-spark3.4-bundle_2.12
-pyyaml
-```
 
 ---
 
-## Configuration
+DEPENDENCIES
 
-### `config/app.yaml`
-
-App-level settings that apply to the whole pipeline — Spark, paths, retry, audit, logging. Nothing table-specific lives here.
-
-```yaml
-spark:
-  app_name: "RAW2DIS"
-  master: "local[*]"
-  config:
-    spark.driver.memory: "4g"
-    spark.sql.shuffle.partitions: 2
-    ...
-
-raw_layer:
-  path: "data/raw/"
-  corrupt_record_handling: "PERMISSIVE"
-  options:
-    csv:
-      header: true
-      inferSchema: false
-      ...
-
-dis_layer:
-  path: "data/distilled/"
-
-bookmark:
-  path: "data/bookmarks/bookmark.json"
-```
-
-### `config/mappings/data-mapping-config/{table}.json`
-
-Per-table config — column mappings, transformation rules, Hudi settings, SCD2 config. One file per table.
-
-```json
-{
-    "version": "1.0",
-    "mapping": {
-        "table_name": "customers",
-        "primary_key": ["customer_id"],
-        "precombine_field": "effective_from",
-        "write_mode": "upsert"
-    },
-    "hudi": {
-        "table_type": "MERGE_ON_READ",
-        "options": { ... },
-        "compaction": { "enabled": true, ... }
-    },
-    "scd": {
-        "type": 2,
-        "effective_from_field": "effective_from",
-        "effective_to_field": "effective_to",
-        "is_current_field": "is_current",
-        "high_date": "9999-12-31 00:00:00"
-    },
-    "bookmark": {
-        "file_pattern": "cdc_*.csv"
-    },
-    "columns": [
-        {
-            "seq": 1,
-            "source": "customer_id",
-            "target": "customer_id",
-            "type": "STRING",
-            "nullable": false,
-            "rules": []
-        },
-        ...
-    ]
-}
-```
+pyspark==4.0.0
+pyyaml==6.0.2
+pandas==2.2.3
+pyarrow==20.0.0
 
 ---
 
-## Transformation Rules
+CONFIGURATION
 
-Rules are applied in sequence per column. Each rule is an `op` with optional parameters.
+1. app.yaml
 
-| Op                | Description                       | Parameters                                  |
-| ----------------- | --------------------------------- | ------------------------------------------- |
-| `TRIM`          | Strip leading/trailing whitespace | —                                          |
-| `UPPER`         | Convert to uppercase              | —                                          |
-| `LOWER`         | Convert to lowercase              | —                                          |
-| `CAST`          | Cast to column `type`           | `format`(for DATE/TIMESTAMP),`on_error` |
-| `COALESCE`      | Replace null with default         | `default`                                 |
-| `REGEX_REPLACE` | Replace pattern with string       | `pattern`,`replacement`                 |
-| `TRUNCATE`      | Limit string length               | `max_length`                              |
-| `DERIVED`       | Compute from Spark SQL expression | `expr`                                    |
+Global framework settings.
 
-**Example — multi-rule column:**
-
-```json
-{
-    "seq": 10,
-    "source": "loyalty_tier",
-    "target": "loyalty_tier",
-    "type": "STRING",
-    "nullable": true,
-    "rules": [
-        { "op": "COALESCE", "default": "STANDARD" },
-        { "op": "TRIM" },
-        { "op": "UPPER" }
-    ]
-}
-```
-
-**Example — derived column:**
-
-```json
-{
-    "seq": 15,
-    "source": null,
-    "target": "effective_from",
-    "type": "TIMESTAMP",
-    "nullable": false,
-    "rules": [
-        { "op": "DERIVED", "expr": "COALESCE(updated_at, created_at)" }
-    ]
-}
-```
-
----
-
-## CDC & Bookmark
-
-Raw CDC files must follow the naming pattern:
-
-```
-data/raw/{table_name}/cdc_<timestamp>.csv
-```
+File:
+config/app.yaml
 
 Example:
 
-```
-data/raw/customers/cdc_20240101_120000.csv
-data/raw/customers/cdc_20240102_120000.csv
-```
+spark:
+  app_name: raw2distilled-engine
 
-The pipeline scans for files matching `cdc_*.csv`, compares against the bookmark, and processes only files newer than the last successful run — oldest to newest.
+paths:
+  raw_dir: data/raw
+  processed_dir: data/processed
 
-`data/bookmarks/bookmark.json` — single file tracking all tables:
+formats:
+  input: csv
+  output: hudi
 
-```json
+logging:
+  level: INFO
+
+---
+
+2. Data Mapping Config
+
+Controls:
+
+- column mappings
+- transformations
+- datatype casting
+- Hudi write options
+
+File:
+config/mappings/data/customer.json
+
+Example:
+
 {
-    "customers": {
-        "last_processed_file": "cdc_20240101_120000.csv",
-        "last_processed_at": "2024-01-01 12:05:00",
-        "status": "SUCCESS"
+  "table_name": "scd_customer",
+
+  "write_mode": "upsert",
+
+  "primary_key": ["customer_id"],
+
+  "columns": [
+    {
+      "seq": 1,
+      "source_field": "operation",
+      "target_field": "op",
+      "data_type": "string",
+      "transformations": ["trim", "upper"]
+    },
+    {
+      "seq": 2,
+      "source_field": "customer_identifier",
+      "target_field": "customer_id",
+      "data_type": "int"
     }
+  ],
+
+  "hudi": {
+    "table_type": "COPY_ON_WRITE",
+    "options": {
+      "hoodie.datasource.write.recordkey.field": "customer_id,effective_from",
+      "hoodie.datasource.write.precombine.field": "effective_from"
+    }
+  }
 }
-```
-
-On failure the bookmark is saved with `"status": "FAILED"` at the failing file. On rerun the pipeline resumes from that file.
 
 ---
 
-## SCD Type 2
+3. Bookmark Config
 
-Each CDC record with `op = I / U / D` is handled as follows:
+Tracks incremental processing progress.
 
-| op    | Action                                                                                               |
-| ----- | ---------------------------------------------------------------------------------------------------- |
-| `I` | Insert new record with `effective_to = 9999-12-31`,`is_current = true`                           |
-| `U` | Close existing record (`effective_to = effective_from`,`is_current = false`), insert new version |
-| `D` | Close existing record,`is_current = false`                                                         |
+File:
+config/mappings/bookmark/customer.json
 
----
+Example:
 
-## Running
-
-```bash
-python main.py --job raw2dis --table customers
-```
-
----
-
-## Audit
-
-Each processed file produces an audit record written to:
-
-```
-data/audit/{table_name}/audit_YYYYMMDD.jsonl
-```
-
-Example record:
-
-```json
 {
-    "run_id": "a1b2c3d4-...",
-    "table_name": "customers",
-    "cdc_file": "cdc_20240101_120000.csv",
-    "rows_read": 1500,
-    "rows_inserted": 800,
-    "rows_updated": 600,
-    "rows_deleted": 100,
-    "rows_rejected": 0,
-    "started_at": "2024-01-01 12:00:00",
-    "finished_at": "2024-01-01 12:00:45",
-    "status": "SUCCESS"
+  "table_name": "customer",
+
+  "bookmark_column": "updated_timestamp",
+
+  "last_processed_value": "1900-01-01 00:00:00",
+
+  "last_run_status": "INITIALIZED",
+
+  "last_run_started_at": null,
+
+  "last_run_finished_at": null
 }
-```
 
 ---
 
-## Adding a New Table
+RAW DATA EXAMPLE
 
-1. Create mapping config at `config/mappings/data-mapping-config/{table}.json`
-2. Drop CDC files at `data/raw/{table}/cdc_<timestamp>.csv`
-3. Add table entry to `data/bookmarks/bookmark.json` with nulls
-4. Run:
+File:
+data/raw/customer.csv
 
-```bash
-python main.py --job raw2dis --table {table}
-```
+Example:
 
-No code changes needed.
+operation,customer_identifier,customer_name,customer_email,updated_timestamp
+I,1, John , JOHN@mail.com ,2026-04-25 10:00:00
+U,1, John Updated , john_new@mail.com ,2026-04-25 11:00:00
+D,1,, ,2026-04-25 12:00:00
+
+---
+
+RUNNING THE PIPELINE
+
+Run Raw to Distilled Job:
+
+python jobs/raw2dis.py --table customer
+
+---
+
+CURRENT PROCESSING FLOW
+
+Raw File
+   ↓
+Read Data
+   ↓
+Apply Bookmark Filter
+   ↓
+Apply Mapping
+   ↓
+Apply Transformations
+   ↓
+Apply SCD2 Columns
+   ↓
+Write Hudi Table
+   ↓
+Update Bookmark
+
+---
+
+LOGGING
+
+Logs are automatically written to:
+
+logs/application.log
+
+Example:
+
+2026-04-25 18:11:23 | INFO  | GenericPipeline | Pipeline completed successfully
+
+---
+
+CURRENT CAPABILITIES
+
+- CSV ingestion
+- Config-driven mappings
+- Generic pipeline execution
+- Incremental CDC processing
+- Bookmark tracking
+- Transformation registry
+- Hudi writes
+- SCD2 metadata columns
+- Structured logging
+
+---
+
+PLANNED ENHANCEMENTS
+
+- Full SCD Type 2 merge logic
+- Validation framework
+- JDBC/Postgres loaders
+- Elasticsearch/OpenSearch indexing
+- Data quality checks
+- Partition handling
+- Multi-job orchestration
+- Unit testing
+- Airflow integration
+- Streaming ingestion
+
+---
+
+DESIGN PHILOSOPHY
+
+The framework is designed around:
+
+Configuration controls behavior.
+Code executes reusable logic.
+
+Instead of building:
+
+One pipeline per table
+
+the framework focuses on:
+
+One generic engine for all tables
+
+---
+
+AUTHOR
+
+Rakesh
