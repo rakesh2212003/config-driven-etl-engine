@@ -1,0 +1,33 @@
+spark:
+  app_name: RAW2DIS
+  master: local[*]
+  config:
+    spark.executor.memory: 4g
+    spark.executor.cores: 2
+    spark.driver.memory: 2g
+    spark.sql.shuffle.partitions: 8
+    spark.sql.adaptive.enabled: true
+    spark.serializer: org.apache.spark.serializer.KryoSerializer
+    spark.sql.session.timeZone: UTC
+
+source:
+  layer: raw
+  path: data/raw
+  format: csv
+  options:
+    header: true
+    inferSchema: false
+    delimiter: ","
+    multiline: false
+    mode: PERMISSIVE
+
+target:
+  layer: dis
+  path: data/dis
+  format: hudi
+  mode: append
+
+logging:
+  level: INFO
+  dir: logs/raw2dis
+  file_prefix: raw2dis
