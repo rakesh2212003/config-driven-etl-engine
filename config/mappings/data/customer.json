@@ -1,7 +1,6 @@
 {
     "table_name": "scd_customer",
     "write_mode": "upsert",
-    "primary_key": ["customer_id"],
     "columns": [
         {
             "seq": 1,

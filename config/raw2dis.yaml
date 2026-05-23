@@ -19,7 +19,6 @@ source:
     inferSchema: false
     delimiter: ","
     multiline: false
-    mode: PERMISSIVE
 
 target:
   layer: dis
